@@ -1,3 +1,11 @@
-.env
+# Images & installers
+/images/
 *.iso
 *.qcow2
+
+# Logs
+/Logs/
+*.log
+
+# Local overrides
+.env.local

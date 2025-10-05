@@ -1,4 +1,5 @@
 #!/bin/sh
+set -euo pipefail
 
 # === Loading .env ===
 set -a
@@ -6,25 +7,39 @@ set -a
 set +a
 
 # === Derived variables ===
-DISK_PATH="$WORKDIR/$DISK_NAME"
+DISK_PATH="$IMAGES_DIR/$DISK_NAME"
 
 # === Cheking if disk exists ===
-if [ ! -f "$DISK_PATH" ]; then
-    echo "❌ Virtual disk not found at $DISK_PATH"
-    echo "➡️  Run ./install-vm.sh first to install Debian."
-    exit 1
+[ -f "$DISK_PATH" ] || { echo "❌ Disk not found at $DISK_PATH"; echo "➡️  Run ./install-vm.sh first."; exit 1; }
+
+mkdir -p "$LOGS_DIR"
+
+need_cmd() { command -v "$1" >/dev/null 2>&1 || { echo "Missing: $1"; exit 1; }; }
+need_cmd "$QEMU_SYSTEM_BIN"
+
+# accel
+accel="tcg,thread=multi"; cpu="max"
+if [ "${ACCEL_POLICY}" = "kvm" ] || { [ "${ACCEL_POLICY}" = "auto" ] && [ -w /dev/kvm ] && [ -e /dev/kvm ]; }; then
+  accel="kvm"; cpu="host"
 fi
 
-# === Run the VM ===
+# display
+ui_args="-nographic"
+if [ "${UI_POLICY}" = "gtk" ] || { [ "${UI_POLICY}" = "auto" ] && [ -n "${DISPLAY-}" ]; }; then
+  ui_args="-display gtk"
+elif [ "${UI_POLICY}" = "sdl" ]; then
+  ui_args="-display sdl"
+fi
+
 echo "🚀 Booting VM from disk..."
-qemu-system-x86_64 \
-    -enable-kvm \
-    -m "$RAM_SIZE" \
-    -boot order=c \
-    -drive if=none,file="$DISK_PATH",format=qcow2,id=drv0 \
-    -device virtio-blk-pci,drive=drv0 \
-    -nic user,model=virtio,hostfwd=tcp::2222-:22,hostfwd=tcp::8080-:80,hostfwd=tcp::8443-:443 \
-    -serial file:"$LOGS/guest-serial.log" \
-    -d guest_errors,unimp,pcall -D "$LOGS/qemu-debug.log" \
-    -display gtk \
-    2> "$LOGS/qemu-host.log"
+exec "$QEMU_SYSTEM_BIN" \
+  -accel "$accel" -cpu "$cpu" \
+  -m "$RAM_SIZE" \
+  -boot order=c \
+  -drive if=none,file="$DISK_PATH",format=qcow2,id=drv0 \
+  -device virtio-blk-pci,drive=drv0 \
+  -nic "user,model=virtio,hostfwd=tcp::${SSH_HOST_PORT}-:22,hostfwd=tcp::${HTTP_HOST_PORT}-:80,hostfwd=tcp::${HTTPS_HOST_PORT}-:443" \
+  -serial "file:$LOGS_DIR/guest-serial.log" \
+  -d guest_errors,unimp,pcall -D "$LOGS_DIR/qemu-debug.log" \
+  $ui_args \
+  2> "$LOGS_DIR/qemu-host.log"
