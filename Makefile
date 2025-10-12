@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 
 install:
-	./install-vm.sh
+	UI_POLICY=gtk UNATTENDED=1 ./install-vm.sh
 
 run:
 	./run-vm.sh
@@ -13,4 +13,5 @@ logs:
 
 clean:
 	. ./.env; \
+	rm -rf "$$LOGS_DIR"; \
 	rm -rf "$$IMAGES_DIR/$(DISK_NAME)" "IMAGES_DIR"/*.qcow2
