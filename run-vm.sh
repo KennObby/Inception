@@ -1,15 +1,14 @@
 #!/bin/sh
 set -euo pipefail
 
-# === Loading .env ===
+# === Load .env ===
 set -a
 . ./.env
 set +a
 
-# === Derived variables ===
 DISK_PATH="$IMAGES_DIR/$DISK_NAME"
 
-# === Cheking if disk exists ===
+# Disk check
 [ -f "$DISK_PATH" ] || { echo "❌ Disk not found at $DISK_PATH"; echo "➡️  Run ./install-vm.sh first."; exit 1; }
 
 mkdir -p "$LOGS_DIR"
@@ -19,17 +18,26 @@ need_cmd "$QEMU_SYSTEM_BIN"
 
 # accel
 accel="tcg,thread=multi"; cpu="max"
-if [ "${ACCEL_POLICY}" = "kvm" ] || { [ "${ACCEL_POLICY}" = "auto" ] && [ -w /dev/kvm ] && [ -e /dev/kvm ]; }; then
+if [ "${ACCEL_POLICY}" = "kvm" ] || { [ "${ACCEL_POLICY}" = "auto" ] && [ -e /dev/kvm ] && [ -w /dev/kvm ]; }; then
   accel="kvm"; cpu="host"
 fi
 
-# display
-ui_args="-nographic"
-if [ "${UI_POLICY}" = "gtk" ] || { [ "${UI_POLICY}" = "auto" ] && [ -n "${DISPLAY-}" ]; }; then
-  ui_args="-display gtk"
-elif [ "${UI_POLICY}" = "sdl" ]; then
-  ui_args="-display sdl"
-fi
+# display (safe graphics)
+ui_args=""
+case "${UI_POLICY}" in
+  gtk)
+    if [ -n "${DISPLAY-}" ]; then ui_args="-display gtk -device virtio-vga"; else ui_args="-nographic"; fi
+    ;;
+  sdl)
+    if [ -n "${DISPLAY-}" ]; then ui_args="-display sdl -device virtio-vga"; else ui_args="-nographic"; fi
+    ;;
+  spice)
+    ui_args="-spice port=5930,disable-ticketing -device qxl-vga -device virtio-serial-pci -chardev spicevmc,id=spicechannel0,name=vdagent -device virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"
+    ;;
+  *)
+    if [ -n "${DISPLAY-}" ]; then ui_args="-display gtk -device virtio-vga"; else ui_args="-nographic"; fi
+    ;;
+esac
 
 echo "🚀 Booting VM from disk..."
 exec "$QEMU_SYSTEM_BIN" \

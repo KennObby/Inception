@@ -3,9 +3,23 @@
 *.iso
 *.qcow2
 
-# Logs
+# Logs & runtime files
 /Logs/
 *.log
+*.pid
+vm-credentials.txt
+
+# Build artifacts (C/C++)
+*.o
+*.so
+*.a
+*.out
+*.exe
+
+# Debug / profiling
+*.gch
+*.pch
+*.stackdump
 
 # Local overrides
 .env.local

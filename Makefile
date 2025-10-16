@@ -1,7 +1,7 @@
 SHELL := /bin/sh
 
 install:
-	UI_POLICY=gtk UNATTENDED=1 ./install-vm.sh
+	UI_POLICY=auto UNATTENDED=1 ./install-vm.sh
 
 run:
 	./run-vm.sh
