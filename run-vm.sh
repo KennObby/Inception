@@ -1,6 +1,6 @@
 #!/bin/sh
-set -euo pipefail
-
+set -e
+( set -o pipefail ) >/dev/null 2>&1 && set -o pipefail || true
 # === Load .env ===
 set -a
 . ./.env

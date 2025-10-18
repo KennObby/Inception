@@ -11,6 +11,9 @@ logs:
 	mkdir -p "$$LOGS_DIR"; \
 	tail -F "$$LOGS_DIR/qemu-host.log" "$$LOGS_DIR/qemu-debug.log" "$$LOGS_DIR/guest-serial.log" 2>/dev/null || true
 
+debug install-vm:
+	UNATTENDED=1 sh -x ./install-vm.sh 2>&1 | sed -n '1,20000p'
+
 clean:
 	. ./.env; \
 	rm -rf "$$LOGS_DIR"; \

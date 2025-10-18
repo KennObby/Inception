@@ -79,9 +79,7 @@ ensure_pubkey() {
   fi
   base="$HOME/.ssh/inception_vm_ed25519"
   pub="$base.pub"
-  # Ensure ~/.ssh exists
   [ -d "$HOME/.ssh" ] || { mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"; }
-  # Generate if missing (but never fail the install)
   if [ ! -f "$pub" ]; then
     >&2 echo "🔐 Generating VM SSH keypair at $base ..."
     if ! ssh-keygen -t ed25519 -f "$base" -N "" -C "inception-vm" >/dev/null 2>&1; then
@@ -218,15 +216,82 @@ d-i preseed/include string http://10.0.2.2:${PRESEED_PORT}/$(basename "$PUBLIC")
 EOF
   progress "Bootstrap preseed written → $BOOTSTRAP"
 
-  # Start & test HTTP server
-  ( cd "$IMAGES_DIR" && python3 -m http.server "$PRESEED_PORT" >"$LOGS_DIR/http.log" 2>&1 & echo $! > "$LOGS_DIR/http.pid" )
-  HTTP_PID="$(cat "$LOGS_DIR/http.pid")"
-  trap 'kill "$HTTP_PID" 2>/dev/null || true; wait "$HTTP_PID" 2>/dev/null || true' EXIT
+#HTTP server (portable & robust)
+BOOTSTRAP_BN="$(basename "$BOOTSTRAP")"
 
-  progress "HTTP server starting on :$PRESEED_PORT (PID=$HTTP_PID)"
-  sleep 1
-  curl -fsS "http://127.0.0.1:${PRESEED_PORT}/$(basename "$BOOTSTRAP")" >/dev/null
+# Stop previous server if it exists
+if [ -f "$LOGS_DIR/http.pid" ]; then
+    _oldpid="$(cat "$LOGS_DIR/http.pid" 2>/dev/null || printf '')"
+    [ -n "$_oldpid" ] && kill "$_oldpid" 2>/dev/null || true
+    wait "$_oldpid" 2>/dev/null || true
+    rm -f "$LOGS_DIR/http.pid"
+fi
+
+if command -v nc >/dev/null 2>&1 && nc -z 127.0.0.1 $PRESEED_PORT 2>/dev/null; then
+    progress "Port $PRESEED_PORT is busy, attempting to free it..."
+    if command -v fuser >/dev/null 2>&1; then
+        fuser -k $PRESEED_PORT/tcp 2>/dev/null || true
+    else
+        # Fallback: find and kill process using the port
+        pid=$(lsof -ti:$PRESEED_PORT 2>/dev/null || echo "")
+        [ -n "$pid" ] && kill $pid 2>/dev/null || true
+    fi
+    sleep 1
+fi
+
+# Start the server
+(
+  cd "$IMAGES_DIR" || exit 1
+  python3 -m http.server "$PRESEED_PORT" >"$LOGS_DIR/http.log" 2>&1 &
+  echo $! > "$LOGS_DIR/http.pid"
+)
+
+# Wait and verify startup
+sleep 1
+HTTP_PID="$(cat "$LOGS_DIR/http.pid" 2>/dev/null || printf '')"
+
+if [ -z "$HTTP_PID" ] || ! kill -0 "$HTTP_PID" 2>/dev/null; then
+    progress "❌ HTTP server failed to start (process died)"
+    progress "Server log:"
+    tail -n 20 "$LOGS_DIR/http.log" | sed 's/^/[http] /' || true
+    exit 1
+fi
+
+if ! curl -fsS "http://127.0.0.1:${PRESEED_PORT}/${BOOTSTRAP_BN}" >/dev/null 2>&1; then
+    progress "❌ HTTP server started but not serving files"
+    progress "Server log:"
+    tail -n 20 "$LOGS_DIR/http.log" | sed 's/^/[http] /' || true
+    kill "$HTTP_PID" 2>/dev/null || true
+    exit 1
+fi
+(
+  cd "$IMAGES_DIR" || exit 1
+  python3 -m http.server "$PRESEED_PORT" >"$LOGS_DIR/http.log" 2>&1 &
+  echo $! > "$LOGS_DIR/http.pid"
+)
+
+HTTP_PID="$(cat "$LOGS_DIR/http.pid" 2>/dev/null || printf '')"
+trap 'kill "$HTTP_PID" 2>/dev/null || true; wait "$HTTP_PID" 2>/dev/null || true' EXIT
+progress "HTTP server starting on :$PRESEED_PORT (PID=$HTTP_PID)"
+
+# Wait for readiness (up to ~3s), then verify the file is served
+i=0
+until curl -fsS "http://127.0.0.1:${PRESEED_PORT}/${BOOTSTRAP_BN}" >/dev/null 2>&1; do
+  i=$((i+1))
+  [ $i -ge 10 ] && break
+  sleep 0.3
+done
+
+if curl -fsS "http://127.0.0.1:${PRESEED_PORT}/${BOOTSTRAP_BN}" >/dev/null 2>&1; then
   progress "HTTP server OK"
+else
+  progress "❌ HTTP server not serving ${BOOTSTRAP_BN}"
+  progress "IMAGES_DIR listing:"
+  ls -l "$IMAGES_DIR" | sed 's/^/[images] /' || true
+  progress "Tail of http.log:"
+  tail -n 20 "$LOGS_DIR/http.log" | sed 's/^/[http] /' || true
+  exit 1
+fi
 
   # Accel choice
   accel="tcg,thread=multi"; cpu="max"
