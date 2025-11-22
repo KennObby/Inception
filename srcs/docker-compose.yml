@@ -2,17 +2,9 @@ volumes:
           mariadb:
                   name: mariadb
                   driver: local
-                  driver_opts:
-                              device: /home/oilyine/data/mariadb/
-                              o: bind
-                              type: none
           wordpress:
                   name: wordpress
                   driver: local
-                  driver_opts:
-                              device: /home/oilyine/data/wordpress/
-                              o: bind
-                              type: none
 
 networks:
           inception:
@@ -43,5 +35,18 @@ services:
                 - .env
               restart: always
         nginx:
+              build: ./requirements/nginx/.
               container_name: nginx
-              depends_on: wordpress
+              depends_on: 
+                - wordpress
+              ports: 
+                - "80:80"
+                - "443:443"
+              env_file:
+                .env
+              networks: 
+                - inception
+              volumes:
+                - ./requirements/nginx/scripts/nginx.conf:/etc/nginx/nginx.conf:ro
+                - wordpress:/var/www/wordpress:ro
+              restart: always

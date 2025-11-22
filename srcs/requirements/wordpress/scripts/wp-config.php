@@ -81,6 +81,7 @@ define('WPLANG', '');
  * in their development environments.
  */
 define('WP_DEBUG', false);
+define('FORCE_SSL_ADMIN', true);
 
 define ('WP_REDIS_HOST', 'redis');
 define ('WP_REDIS_PORT', 6379);

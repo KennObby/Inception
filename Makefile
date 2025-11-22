@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-SHELL := /bin/sh
-
 install:
 	UI_POLICY=auto UNATTENDED=1 ./install-vm.sh
 
@@ -19,11 +16,14 @@ clean:
 	. ./.env; \
 	rm -rf "$$LOGS_DIR"; \
 	rm -rf "$$IMAGES_DIR/$(DISK_NAME)" "IMAGES_DIR"/*.qcow2
-=======
-
 up: 
 	docker compose -f srcs/docker-compose.yml up -d --build
 
 down:
 	docker compose -f srcs/docker-compose.yml down
->>>>>>> f59ef3f (Initial commit: Inception docker-compose setup)
+
+clean-data:
+	sudo rm -rf /home/oilyine/data/mariadb/*
+	sudo rm -rf /home/oilyine/data/wordpress/*
+
+fclean: down clean-data

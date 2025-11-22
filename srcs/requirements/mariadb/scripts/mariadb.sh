@@ -12,15 +12,16 @@ chown -R mysql:mysql /run/mysqld
 if [ ! -d "$DATADIR/mysql" ]; then
     echo "Initializing MariaDB data dir..."
     mariadb-install-db --user=mysql --datadir="$DATADIR" --skip-test-db > /dev/null
+fi
 
-    mariadbd --user=mysql --datadir="$DATADIR" --skip-networking --socket="$SOCK" &
-    pid=$!
+mariadbd --user=mysql --datadir="$DATADIR" --socket="$SOCK" --skip-networking=0 &
+pid=$!
 
-    echo -n "Waiting for temporary MariaDB to accept connections..."
-    until mariadb-admin --protocol=socket --socket="$SOCK" ping >/dev/null 2>&1; do
-        sleep 1
-    done
-    echo " up."
+echo -n "Waiting for temporary MariaDB to accept connections..."
+until mariadb-admin --protocol=socket --socket="$SOCK" ping >/dev/null 2>&1; do
+    sleep 1
+done
+echo " up."
 
     mariadb --protocol=socket --socket="$SOCK" -uroot <<SQL
 CREATE DATABASE IF NOT EXISTS \`${MARIADB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -29,8 +30,7 @@ GRANT ALL PRIVILEGES ON \`${MARIADB_NAME}\`.* TO '${MARIADB_USER}'@'%';
 FLUSH PRIVILEGES;
 SQL
 
-    mariadb-admin --protocol=socket --socket="$SOCK" -uroot shutdown
-    wait "$pid" || true
-fi
+mariadb-admin --protocol=socket --socket="$SOCK" -uroot shutdown
+wait "$pid" || true
 
 exec mariadbd --user=mysql --datadir="$DATADIR" --console
