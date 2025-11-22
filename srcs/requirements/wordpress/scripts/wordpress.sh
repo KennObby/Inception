@@ -12,6 +12,8 @@ DB_HOST="${WP_DB_HOST%:*}"
 DB_PORT="${WP_DB_HOST#*:}"
 [ "$DB_HOST" = "$WP_DB_HOST" ] && DB_PORT=3306
 
+WP_URL="https://${DOMAIN}"
+
 echo "Waiting for MariaDB at $DB_HOST:$DB_PORT and DB ${WP_DB}..."
 until mysql -h "$DB_HOST" -P "$DB_PORT" -u "$WP_DB_USER" -p"$WP_DB_PWD" -e "USE ${WP_DB}; SELECT 1;" >/dev/null 2>&1; do
     sleep 2
@@ -52,6 +54,12 @@ wp --allow-root --path=/var/www/wordpress core install \
     --skip-email \
     --allow-root --path=/var/www/wordpress
 fi
+
+
+wp --allow-root --path=/var/www/wordpress option update home "$WP_URL"
+wp --allow-root --path=/var/www/wordpress option update siteurl "$WP_URL"
+
+touch /var/www/wordpress/.bootstrapped
 
 if ! wp --allow-root --path=/var/www/wordpress user get "$WP_USER" >/dev/null 2>&1; then
   wp --allow-root --path=/var/www/wordpress user create "$WP_USER" "$WP_MAIL" \
