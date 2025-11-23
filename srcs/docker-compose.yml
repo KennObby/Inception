@@ -35,8 +35,9 @@ services:
                 - .env
               restart: always
         nginx:
-              build: ./requirements/nginx/.
               container_name: nginx
+              build: ./requirements/nginx/.
+              image: nginx:oilyine-
               depends_on: 
                 - wordpress
               ports: 
@@ -48,4 +49,10 @@ services:
                 - inception
               volumes:
                 - wordpress:/var/www/wordpress:rw
+              restart: always
+        redis:
+              container_name: redis
+              build: ./requirements/redis
+              image: redis:oilyine-
+              networks: [inception]
               restart: always
