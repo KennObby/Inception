@@ -6,6 +6,8 @@ RUN apt -y update \
 
 RUN mkdir -p /etc/nginx/certs
 
+COPY ./scripts/nginx.conf /etc/nginx/nginx.conf.template
+
 COPY ./scripts/nginx.sh /nginx.sh
 RUN chmod +x /nginx.sh
 

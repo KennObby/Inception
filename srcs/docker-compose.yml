@@ -47,6 +47,5 @@ services:
               networks: 
                 - inception
               volumes:
-                - ./requirements/nginx/scripts/nginx.conf:/etc/nginx/nginx.conf:ro
-                - wordpress:/var/www/wordpress:ro
+                - wordpress:/var/www/wordpress:rw
               restart: always
