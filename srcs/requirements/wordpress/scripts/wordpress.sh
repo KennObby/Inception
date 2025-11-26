@@ -70,6 +70,7 @@ fi
 if wp --allow-root --path=/var/www/wordpress core is-installed; then
   wp --allow-root --path=/var/www/wordpress theme install twentysixteen --activate || true
   wp --allow-root --path=/var/www/wordpress plugin redis-cache --activate || true
+  wp --allow-root redis enable || true
   wp --allow-root --path=/var/www/wordpress plugin update --all || true
 fi
 
