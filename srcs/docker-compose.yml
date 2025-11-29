@@ -1,78 +1,124 @@
-volumes:
-          mariadb:
-                  name: mariadb
-                  driver: local
-          wordpress:
-                  name: wordpress
-                  driver: local
+services:
+  mariadb:
+    container_name: mariadb
+    build: ./requirements/mariadb
+    restart: unless-stopped
+    networks:
+      - inception
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    environment:
+      - MARIADB_NAME=${MARIADB_NAME}
+      - MARIADB_USER=${MARIADB_USER}
+      - MARIADB_PWD=${MARIADB_PWD}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wordpress:
+    container_name: wordpress
+    build: ./requirements/wordpress
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - inception
+    volumes:
+      - wordpress_data:/var/www/wordpress
+    environment:
+      - DOMAIN=${DOMAIN}
+      - WP_DB=${MARIADB_NAME}
+      - WP_DB_USER=${MARIADB_USER}
+      - WP_DB_PWD=${MARIADB_PWD}
+      - WP_DB_HOST=mariadb:3306
+      - WP_TITLE=${WP_TITLE}
+      - WP_ADMIN_USER=${WP_ADMIN_USER}
+      - WP_ADMIN_PWD=${WP_ADMIN_PWD}
+      - WP_ADMIN_MAIL=${WP_ADMIN_MAIL}
+      - WP_USER=${WP_USER}
+      - WP_MAIL=${WP_MAIL}
+      - WP_USER_PWD=${WP_USER_PWD}
+
+  nginx:
+    container_name: nginx
+    build: ./requirements/nginx
+    restart: unless-stopped
+    depends_on:
+      - wordpress
+    networks:
+      - inception
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - wordpress_data:/var/www/wordpress:ro
+    environment:
+      - DOMAIN=${DOMAIN}
+
+  redis:
+    container_name: redis
+    build: ./requirements/bonus/redis
+    restart: unless-stopped
+    networks:
+      - inception
+    volumes:
+      - redis_data:/data
+
+  ftp:
+    container_name: ftp
+    build: ./requirements/bonus/ftp
+    restart: unless-stopped
+    depends_on:
+      - wordpress
+    networks:
+      - inception
+    ports:
+      - "21:21"
+      - "21000-21010:21000-21010"
+    volumes:
+      - wordpress_data:/var/www/wordpress
+    environment:
+      - FTP_USER=${FTP_USER}
+      - FTP_PWD=${FTP_PWD}
+      - DOMAIN=${DOMAIN}
+
+  adminer:
+    container_name: adminer
+    build: ./requirements/bonus/adminer
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - inception
+    ports:
+      - "9090:8080"
 
 networks:
-          inception:
-                    name: inception
+  inception:
+    driver: bridge
 
-services:
-        mariadb:
-              container_name: mariadb
-              build: ./requirements/mariadb/.
-              image: mariadb:oilyine-
-              volumes:
-                - mariadb:/var/lib/mysql
-              env_file:
-                - .env
-              networks:
-                - inception
-              restart: always
-        wordpress:
-              container_name: wordpress
-              build: ./requirements/wordpress/.
-              image: wordpress:oilyine-
-              depends_on: [mariadb]
-              volumes: 
-                - wordpress:/var/www/wordpress
-              networks:
-                - inception
-              env_file:
-                - .env
-              restart: always
-        nginx:
-              container_name: nginx
-              build: ./requirements/nginx/.
-              image: nginx:oilyine-
-              depends_on: 
-                - wordpress
-              ports: 
-                - "80:80"
-                - "443:443"
-              env_file:
-                - .env
-              networks: 
-                - inception
-              volumes:
-                - wordpress:/var/www/wordpress:rw
-              restart: always
-        redis:
-              container_name: redis
-              build: ./requirements/bonus/redis/.
-              image: redis:oilyine-
-              networks: [inception]
-              restart: always
-        adminer:
-              container_name: adminer
-              build: ./requirements/bonus/adminer/.
-              image: adminer:oilyine-
-              networks: [inception]
-              restart: always
-              ports:
-                - "8080:8080"
-        ftp:
-              container_name: ftp
-              build: ./requirements/bonus/ftp/.
-              image: ftp:oilyine-
-              networks: [inception]
-              restart: always
-              env_file: [.env]
-              volumes:
-                - wordpress:/var/www/wordpress
-              ports:
-                - "21:21"
-                - "21000-21010:21000-21010"
+volumes:
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/oilyine/data/mariadb
+  wordpress_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/oilyine/data/wordpress
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /home/oilyine/data/redis

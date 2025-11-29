@@ -46,7 +46,11 @@ exec "$QEMU_SYSTEM_BIN" \
   -boot order=c \
   -drive if=none,file="$DISK_PATH",format=qcow2,id=drv0 \
   -device virtio-blk-pci,drive=drv0 \
-  -nic "user,model=virtio,hostfwd=tcp::${SSH_HOST_PORT}-:22,hostfwd=tcp::${HTTP_HOST_PORT}-:80,hostfwd=tcp::${HTTPS_HOST_PORT}-:443" \
+  -nic "user,model=virtio,\
+            hostfwd=tcp::${SSH_HOST_PORT}-:22,\
+            hostfwd=tcp::${HTTP_HOST_PORT}-:80,\
+            hostfwd=tcp::${HTTPS_HOST_PORT}-:443 \
+            hostfwd=tcp::${ADMINER_HOST_PORT}-:9090"
   -serial "file:$LOGS_DIR/guest-serial.log" \
   -d guest_errors,unimp,pcall -D "$LOGS_DIR/qemu-debug.log" \
   $ui_args \
