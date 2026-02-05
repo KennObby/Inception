@@ -113,9 +113,10 @@ fi
 if [ "${UNATTENDED:-0}" = "1" ]; then
   progress "Starting unattended installation..."
 
-  NB_DIR="$IMAGES_DIR/netboot"
+  DEBIAN_SUITE="${DEBIAN_SUITE:-bookworm}"
+  NB_DIR="$IMAGES_DIR/netboot-$DEBIAN_SUITE"
   mkdir -p "$NB_DIR"
-  KURL_BASE="https://deb.debian.org/debian/dists/stable/main/installer-amd64/current/images/netboot/debian-installer/amd64"
+  KURL_BASE="https://deb.debian.org/debian/dists/$DEBIAN_SUITE/main/installer-amd64/current/images/netboot/debian-installer/amd64"
   [ -f "$NB_DIR/linux" ]     || wget -O "$NB_DIR/linux"     "$KURL_BASE/linux"
   [ -f "$NB_DIR/initrd.gz" ] || wget -O "$NB_DIR/initrd.gz" "$KURL_BASE/initrd.gz"
 
