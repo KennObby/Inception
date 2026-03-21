@@ -9,7 +9,7 @@ set +a
 DISK_PATH="$IMAGES_DIR/$DISK_NAME"
 
 # Disk check
-[ -f "$DISK_PATH" ] || { echo "❌ Disk not found at $DISK_PATH"; echo "➡️  Run ./install-vm.sh first."; exit 1; }
+[ -f "$DISK_PATH" ] || { echo "Disk not found at $DISK_PATH"; echo "Run ./install-vm.sh first."; exit 1; }
 
 mkdir -p "$LOGS_DIR"
 
@@ -39,14 +39,31 @@ case "${UI_POLICY}" in
     ;;
 esac
 
-echo "🚀 Booting VM from disk..."
+echo "Booting VM from disk..."
 exec "$QEMU_SYSTEM_BIN" \
   -accel "$accel" -cpu "$cpu" \
   -m "$RAM_SIZE" \
   -boot order=c \
   -drive if=none,file="$DISK_PATH",format=qcow2,id=drv0 \
   -device virtio-blk-pci,drive=drv0 \
-  -nic "user,model=virtio,hostfwd=tcp::${SSH_HOST_PORT}-:22,hostfwd=tcp::${HTTP_HOST_PORT}-:80,hostfwd=tcp::${HTTPS_HOST_PORT}-:443,hostfwd=tcp::${ADMINER_HOST_PORT}-:9090" \
+  -nic "user,model=virtio,\
+  hostfwd=tcp::${SSH_HOST_PORT}-:22,\
+  hostfwd=tcp::${HTTP_HOST_PORT}-:80,\
+  hostfwd=tcp::${HTTPS_HOST_PORT}-:443,\
+  hostfwd=tcp::${KEYCLOAK_HOST_PORT}-:8080,\
+  hostfwd=tcp::${ADMINER_HOST_PORT}-:9090,\
+  hostfwd=tcp::21-:21,\
+  hostfwd=tcp::21000-:21000,\
+  hostfwd=tcp::21001-:21001,\
+  hostfwd=tcp::21002-:21002,\
+  hostfwd=tcp::21003-:21003,\
+  hostfwd=tcp::21004-:21004,\
+  hostfwd=tcp::21005-:21005,\
+  hostfwd=tcp::21006-:21006,\
+  hostfwd=tcp::21007-:21007,\
+  hostfwd=tcp::21008-:21008,\
+  hostfwd=tcp::21009-:21009,\
+  hostfwd=tcp::21010-:21010"
   -serial "file:$LOGS_DIR/guest-serial.log" \
   -d guest_errors,unimp,pcall -D "$LOGS_DIR/qemu-debug.log" \
   $ui_args \

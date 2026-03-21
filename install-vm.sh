@@ -67,7 +67,7 @@ PY
     out="$(mkpasswd -m sha-512 "$pw" 2>/dev/null || true)"
     [ -n "$out" ] && { printf '%s\n' "$out"; return 0; }
   fi
-  echo "⚠️  No hasher available; using SSH-key only (password disabled)." >&2
+  echo "No hasher available; using SSH-key only (password disabled)." >&2
   printf '!\n'
 }
 
@@ -81,13 +81,13 @@ ensure_pubkey() {
   pub="$base.pub"
   [ -d "$HOME/.ssh" ] || { mkdir -p "$HOME/.ssh"; chmod 700 "$HOME/.ssh"; }
   if [ ! -f "$pub" ]; then
-    >&2 echo "🔐 Generating VM SSH keypair at $base ..."
+    >&2 echo "Generating VM SSH keypair at $base ..."
     if ! ssh-keygen -t ed25519 -f "$base" -N "" -C "inception-vm" >/dev/null 2>&1; then
-      >&2 echo "❌ ssh-keygen failed; skipping SSH key injection."
+      >&2 echo "ssh-keygen failed; skipping SSH key injection."
       return 1
     fi
   fi
-  [ -f "$pub" ] || { >&2 echo "❌ Public key not found at $pub; skipping."; return 1; }
+  [ -f "$pub" ] || { >&2 echo "Public key not found at $pub; skipping."; return 1; }
   printf '%s\n' "$pub"
   return 0
 }
@@ -100,12 +100,12 @@ SAVE_CREDENTIALS="${SAVE_CREDENTIALS:-1}"
 
 # === Ensure ISO & disk ===
 if [ ! -f "$ISO_PATH" ]; then
-  echo "🔽 Downloading ISO from $ISO_URL..."
+  echo "Downloading ISO from $ISO_URL..."
   wget -O "$ISO_PATH" "$ISO_URL"
 fi
 
 if [ ! -f "$DISK_PATH" ]; then
-  echo "💿 Creating new virtual disk at $DISK_PATH ($DISK_SIZE)..."
+  echo "Creating new virtual disk at $DISK_PATH ($DISK_SIZE)..."
   "$QEMU_IMG_BIN" create -f qcow2 "$DISK_PATH" "$DISK_SIZE"
 fi
 
@@ -154,12 +154,12 @@ Password: $VM_PASS
 SSH Key: ${PUBFILE:-<none>}
 SSH Command: ssh -p ${SSH_HOST_PORT:-2222} $VM_USER@localhost
 EOF
-    progress "✅ Credentials saved to: $CREDENTIALS_FILE"
+    progress "Credentials saved to: $CREDENTIALS_FILE"
   fi
 
   # Generate preseed files
   REPO_PRESEED="$WORKDIR/installers/preseed.cfg"
-  [ -f "$REPO_PRESEED" ] || { echo "❌ Missing $REPO_PRESEED"; exit 1; }
+  [ -f "$REPO_PRESEED" ] || { echo "Missing $REPO_PRESEED"; exit 1; }
 
   SECRETS="$IMAGES_DIR/preseed.secrets.cfg"
   BOOTSTRAP="$IMAGES_DIR/preseed.bootstrap.cfg"
@@ -252,14 +252,14 @@ sleep 1
 HTTP_PID="$(cat "$LOGS_DIR/http.pid" 2>/dev/null || printf '')"
 
 if [ -z "$HTTP_PID" ] || ! kill -0 "$HTTP_PID" 2>/dev/null; then
-    progress "❌ HTTP server failed to start (process died)"
+    progress "HTTP server failed to start (process died)"
     progress "Server log:"
     tail -n 20 "$LOGS_DIR/http.log" | sed 's/^/[http] /' || true
     exit 1
 fi
 
 if ! curl -fsS "http://127.0.0.1:${PRESEED_PORT}/${BOOTSTRAP_BN}" >/dev/null 2>&1; then
-    progress "❌ HTTP server started but not serving files"
+    progress "HTTP server started but not serving files"
     progress "Server log:"
     tail -n 20 "$LOGS_DIR/http.log" | sed 's/^/[http] /' || true
     kill "$HTTP_PID" 2>/dev/null || true
@@ -286,7 +286,7 @@ done
 if curl -fsS "http://127.0.0.1:${PRESEED_PORT}/${BOOTSTRAP_BN}" >/dev/null 2>&1; then
   progress "HTTP server OK"
 else
-  progress "❌ HTTP server not serving ${BOOTSTRAP_BN}"
+  progress "HTTP server not serving ${BOOTSTRAP_BN}"
   progress "IMAGES_DIR listing:"
   ls -l "$IMAGES_DIR" | sed 's/^/[images] /' || true
   progress "Tail of http.log:"
@@ -345,18 +345,18 @@ fi
       -no-reboot \
       $ui_args $audio_args
   then
-    progress "⚠️ QEMU exited with error, see logs in $LOGS_DIR"
+    progress "QEMU exited with error, see logs in $LOGS_DIR"
     exit 1
   fi
 
   kill "$HTTP_PID" 2>/dev/null || true
-  progress "✅ Installation completed. Use './run-vm.sh' to boot."
+  progress "Installation completed. Use './run-vm.sh' to boot."
   [ -n "${CREDENTIALS_FILE:-}" ] && { progress "📋 Credentials → $CREDENTIALS_FILE"; }
   exit 0
 fi
 
 # === Interactive fallback (ISO) ===
-echo "🚀 Starting interactive installer (ISO)..."
+echo "Starting interactive installer (ISO)..."
 accel="tcg,thread=multi"; cpu="max"
 if [ "${ACCEL_POLICY}" = "kvm" ] || { [ "${ACCEL_POLICY}" = "auto" ] && [ -e /dev/kvm ] && [ -w /dev/kvm ]; }; then
   accel="kvm"; cpu="host"
