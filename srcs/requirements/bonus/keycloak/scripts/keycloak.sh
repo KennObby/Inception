@@ -21,8 +21,9 @@ exec ${KC_EXEC} start \
   --db-url=${DB_URL} \
   --db-username=${KC_DB_USERNAME} \
   --db-password=${KC_DB_PASSWORD} \
+  --hostname="${DOMAIN}" \
   --hostname-strict=false \
-  --hostname="${DOMAIN:-oilyine.42.lu}" \
   --proxy-headers=xforwarded \
   --http-enabled=true \
-  --http-port=8080
+  --http-port=8080 \
+  --http-relative-path=/auth

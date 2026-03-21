@@ -86,10 +86,9 @@ define('FORCE_SSL_ADMIN', true);
 define ('WP_REDIS_HOST', 'redis');
 define ('WP_REDIS_PORT', 6379);
 
-/**
-  * define('WP_SITEURL', 'http://example.com/wordpress');
-  * define('WP_HOME', 'http://example.com/wordpress');
- */
+
+define('WP_SITEURL', 'https://oilyine.42.lu:8443');
+define('WP_HOME', 'https://oilyine.42.lu:8443');
 
 /* That's all, stop editing! Happy blogging. */
 

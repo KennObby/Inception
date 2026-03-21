@@ -35,6 +35,7 @@ services:
       - wordpress_data:/var/www/wordpress
     environment:
       - DOMAIN=${DOMAIN}
+      - WP_PUBLIC_URL=${WP_PUBLIC_URL}
       - WP_DB=${MARIADB_NAME}
       - WP_DB_USER=${MARIADB_USER}
       - WP_DB_PWD=${MARIADB_PWD}
@@ -111,6 +112,8 @@ services:
         condition: service_healthy
     networks:
       - inception
+    ports:
+      - "8080:8080"
     environment:
       - DOMAIN=${DOMAIN}
       - KC_DB=mariadb
@@ -131,16 +134,16 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/data/mariadb
+      device: /home/oilyine/Inception/data/mariadb
   wordpress_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/data/wordpress
+      device: /home/oilyine/Inception/data/wordpress
   redis_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/data/redis
+      device: /home/oilyine/Inception/data/redis
