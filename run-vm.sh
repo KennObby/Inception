@@ -39,6 +39,19 @@ case "${UI_POLICY}" in
     ;;
 esac
 
+NIC_OPTS="user,model=virtio,\
+hostfwd=tcp::${SSH_HOST_PORT}-:22,\
+hostfwd=tcp::${HTTP_HOST_PORT}-:80,\
+hostfwd=tcp::${HTTPS_HOST_PORT}-:443,\
+hostfwd=tcp::${KEYCLOAK_HOST_PORT}-:8080,\
+hostfwd=tcp::${ADMINER_HOST_PORT}-:9090,\
+hostfwd=tcp::${FTP_HOST_PORT}-:21"
+
+#FTP Port passive management
+for p in $(seq "$FTP_PASSIVE_MIN" "$FTP_PASSIVE_MAX"); do
+    NIC_OPTS="$NIC_OPTS,hostfwd=tcp::$p-:$p"
+done
+
 echo "Booting VM from disk..."
 exec "$QEMU_SYSTEM_BIN" \
   -accel "$accel" -cpu "$cpu" \
@@ -46,24 +59,7 @@ exec "$QEMU_SYSTEM_BIN" \
   -boot order=c \
   -drive if=none,file="$DISK_PATH",format=qcow2,id=drv0 \
   -device virtio-blk-pci,drive=drv0 \
-  -nic "user,model=virtio,\
-  hostfwd=tcp::${SSH_HOST_PORT}-:22,\
-  hostfwd=tcp::${HTTP_HOST_PORT}-:80,\
-  hostfwd=tcp::${HTTPS_HOST_PORT}-:443,\
-  hostfwd=tcp::${KEYCLOAK_HOST_PORT}-:8080,\
-  hostfwd=tcp::${ADMINER_HOST_PORT}-:9090,\
-  hostfwd=tcp::21-:21,\
-  hostfwd=tcp::21000-:21000,\
-  hostfwd=tcp::21001-:21001,\
-  hostfwd=tcp::21002-:21002,\
-  hostfwd=tcp::21003-:21003,\
-  hostfwd=tcp::21004-:21004,\
-  hostfwd=tcp::21005-:21005,\
-  hostfwd=tcp::21006-:21006,\
-  hostfwd=tcp::21007-:21007,\
-  hostfwd=tcp::21008-:21008,\
-  hostfwd=tcp::21009-:21009,\
-  hostfwd=tcp::21010-:21010"
+  -nic "$NIC_OPTS" \
   -serial "file:$LOGS_DIR/guest-serial.log" \
   -d guest_errors,unimp,pcall -D "$LOGS_DIR/qemu-debug.log" \
   $ui_args \
