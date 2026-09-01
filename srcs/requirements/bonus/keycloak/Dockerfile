@@ -3,7 +3,7 @@ FROM debian:bookworm
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -y \
-    && apt-get install -y curl ca-certificates openjdk-17-jre-headless bash \
+    && apt-get install -y curl ca-certificates openjdk-17-jre-headless bash jq \
     && rm -rf /var/apt/lists/*
 
 ENV KC_VERSION=26.4.2

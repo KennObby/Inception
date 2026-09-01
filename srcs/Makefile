@@ -7,7 +7,7 @@ up: setup-data
 	docker compose -f $(COMPOSE_FILE) up -d --build
 
 down:
-	docker compose -f $(COMPOSE_FILE) down
+	docker compose -f $(COMPOSE_FILE) down -v
 
 setup-data:
 	@mkdir -p $(DATA_DIR)/mariadb

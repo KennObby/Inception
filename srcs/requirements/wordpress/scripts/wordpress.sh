@@ -10,6 +10,10 @@ DB_PORT="${WP_DB_HOST#*:}"
 
 WP_URL="${WP_PUBLIC_URL:-https://${DOMAIN}}"
 
+: "${KC_REALM:=inception}"
+: "${KC_CLIENT_ID:=wordpress}"
+: "${KC_CLIENT_SECRET:?KC_CLIENT_SECRET not set}"
+
 echo "Waiting for MariaDB at $DB_HOST:$DB_PORT and DB ${WP_DB}..."
 until mysql -h "$DB_HOST" -P "$DB_PORT" -u "$WP_DB_USER" -p"$WP_DB_PWD" -e "USE ${WP_DB}; SELECT 1;" >/dev/null 2>&1; do
     sleep 2
@@ -45,6 +49,28 @@ if ! grep -q "WP_REDIS_HOST" /var/www/wordpress/wp-config.php; then
     wp --allow-root --path=/var/www/wordpress config set WP_REDIS_PORT 6379 --type=constant --raw
 fi
 
+if ! grep -q "OIDC_CLIENT_ID" /var/www/wordpress/wp-config.php; then
+    KC_ISSUER_BASE="https://${DOMAIN}:8443/auth/realms/${KC_REALM}"
+    KC_INTERNAL_BASE="http://keycloak:8080/auth/realms/${KC_REALM}"
+
+    wp --allow-root --path=/var/www/wordpress config set OIDC_LOGIN_TYPE              "button"                                               --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_CLIENT_ID               "${KC_CLIENT_ID}"                                      --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_CLIENT_SECRET           "${KC_CLIENT_SECRET}"                                  --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_CLIENT_SCOPE            "openid email profile"                                 --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ISSUER                  "${KC_ISSUER_BASE}"                                    --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ENDPOINT_LOGIN_URL      "${KC_ISSUER_BASE}/protocol/openid-connect/auth"       --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ENDPOINT_LOGOUT_URL     "${KC_ISSUER_BASE}/protocol/openid-connect/logout"     --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ENDPOINT_TOKEN_URL      "${KC_INTERNAL_BASE}/protocol/openid-connect/token"    --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ENDPOINT_USERINFO_URL   "${KC_INTERNAL_BASE}/protocol/openid-connect/userinfo" --type=constant
+    wp --allow-root --path=/var/www/wordpress config set OIDC_ENDPOINT_JWKS_URL       "${KC_INTERNAL_BASE}/protocol/openid-connect/certs"    --type=constant
+
+    wp --allow-root --path=/var/www/wordpress config set OIDC_LINK_EXISTING_USERS      1 --type=constant --raw
+    wp --allow-root --path=/var/www/wordpress config set OIDC_CREATE_IF_DOES_NOT_EXIST 1 --type=constant --raw
+    wp --allow-root --path=/var/www/wordpress config set OIDC_REDIRECT_ON_LOGOUT       1 --type=constant --raw
+fi
+
+
+
 if ! wp --allow-root --path=/var/www/wordpress core is-installed; then
     wp --allow-root --path=/var/www/wordpress core install \
         --url="$DOMAIN" \
@@ -72,21 +98,29 @@ if wp --allow-root --path=/var/www/wordpress core is-installed; then
     else
         wp --allow-root --path=/var/www/wordpress theme activate twentysixteen || true
     fi
-    
+
     if ! wp --allow-root --path=/var/www/wordpress plugin is-installed redis-cache; then
         wp --allow-root --path=/var/www/wordpress plugin install redis-cache --activate || true
     else
         wp --allow-root --path=/var/www/wordpress plugin activate redis-cache || true
     fi
-    
+
+    if ! wp --allow-root --path=/var/www/wordpress plugin is-installed daggerhart-openid-connect-generic; then
+        wp --allow-root --path=/var/www/wordpress plugin install daggerhart-openid-connect-generic --activate || true
+    else
+        wp --allow-root --path=/var/www/wordpress plugin activate daggerhart-openid-connect-generic || true
+    fi
+    wp --allow-root --path=/var/www/wordpress eval '
+    $settings = get_option("openid_connect_generic_settings", array());
+    $settings["allow_internal_idp"] = 1;
+    update_option("openid_connect_generic_settings", $settings);
+    '
+
     wp --allow-root --path=/var/www/wordpress redis enable 2>/dev/null || echo "Redis cache setup complete"
-    
     wp --allow-root --path=/var/www/wordpress plugin update --all || true
 fi
 
 sed -i 's|^listen\s*=.*|listen = 0.0.0.0:9000|' /etc/php/8.2/fpm/pool.d/www.conf
-
 mkdir -p /run/php
 chown -R www-data:www-data /var/www/wordpress
-
 exec php-fpm8.2 -F
