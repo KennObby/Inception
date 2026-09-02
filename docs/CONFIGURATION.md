@@ -22,7 +22,7 @@ This project reads configuration from two separate `.env` files: one for the QEM
 | `SAVE_CREDENTIALS` | `1` | `install-vm.sh` | Write generated VM user/password to `$LOGS_DIR/vm-credentials.txt` |
 | `SSH_HOST_PORT` | `2222` | both | Host port forwarded to the VM's SSH (`22`) |
 | `HTTP_HOST_PORT` | `8080` | `run-vm.sh` | Host port forwarded to the VM's port `80` |
-| `HTTPS_HOST_PORT` | `8443` | `run-vm.sh` | Host port forwarded to the VM's port `443`, for the personal-VM dev workflow only |
+| `HTTPS_HOST_PORT` | `8443` | `run-vm.sh` | Host port forwarded to the VM's port `443` — this is why URLs in this project use `:8443` |
 | `KEYCLOAK_HOST_PORT` | `8081` | `run-vm.sh` | Host port forwarded to the VM's port `8080` (see note below) |
 | `ADMINER_HOST_PORT` | `9090` | `run-vm.sh` | Host port forwarded to the VM's port `9090` |
 | `FTP_HOST_PORT` | `2121` | `run-vm.sh` | Host port forwarded to the VM's port `21` |
@@ -30,25 +30,21 @@ This project reads configuration from two separate `.env` files: one for the QEM
 
 Runtime-only overrides (not in `.env`, passed on the command line): `UI_POLICY`, `UNATTENDED`, `VM_USER`, `VM_PASS`, `VM_PASS_HASH`, `PUBKEY_PATH`, `PRESEED_PORT`, `DEBIAN_SUITE`. E.g. `make install` is literally `UI_POLICY=auto UNATTENDED=1 ./install-vm.sh`.
 
-> This VM layer is a personal development convenience (useful on a machine without direct Docker/root access) and is not part of the mandatory Inception infrastructure — it is not what gets evaluated. `srcs/.env` and the entrypoint scripts use bare `https://$DOMAIN` with no port suffix.
->
-> **Port 80:** `srcs/docker-compose.yml`'s `nginx` service currently publishes both `443` and `80` (with `80` redirecting to `443`), for everyday local convenience. The real evaluation criteria require NGINX reachable on port **443 only** — `http://` must refuse the connection, not redirect. Remove the `"80:80"` line from `nginx`'s `ports:` and the `listen 80 { ... }` server block from `nginx.conf` before your defense; see [EVALUATION.md](EVALUATION.md#simple-setup) for the exact revert.
->
-> **Note on `KEYCLOAK_HOST_PORT`:** `run-vm.sh` forwards this host port to the VM's TCP `8080`, but nothing inside the VM (outside Docker) listens there — the `keycloak` container's `8080` is only published to the `inception` Docker network, not to the VM host (`docker-compose.yml` has no `ports:` entry for `keycloak`). Keycloak is reached exclusively through NGINX's `/auth/` reverse-proxy on `443`. This host forward is effectively unused; see [EVALUATION.md](EVALUATION.md) for detail.
+> **Note on `KEYCLOAK_HOST_PORT`:** `run-vm.sh` forwards this host port to the VM's TCP `8080`, but nothing inside the VM (outside Docker) listens there — the `keycloak` container's `8080` is only published to the `inception` Docker network, not to the VM host (`docker-compose.yml` has no `ports:` entry for `keycloak`). Keycloak is reached exclusively through NGINX's `/auth/` reverse-proxy on `8443`. This host forward is effectively unused.
 
 ## `srcs/.env` — application stack (`docker-compose.yml` + container entrypoints)
 
-`srcs/.env` is not committed to the repository (credentials must never be in git — see [EVALUATION.md](EVALUATION.md)). Copy `srcs/.env.example` to `srcs/.env` and fill in real values before running `make up`.
+`srcs/.env` is not committed to the repository. Copy `srcs/.env.example` to `srcs/.env` and fill in real values before running `make up`.
 
 | Variable | Example value | Consumed by | Purpose |
 |---|---|---|---|
 | `DOMAIN` | `oilyine.42.lu` | nginx, wordpress, ftp, keycloak | Server name for the vhost, TLS cert CN/SAN, WP site URL, Keycloak hostname/issuer |
 | `HOST` | `localhost` | (unused directly by compose; template for `CERT_DIR`/`KEY`/`CRT` below) | |
-| `CERT_DIR`, `KEY`, `CRT`, `CSRCONF` | `/etc/nginx/certs`, … | *(declared but not read by any compose service — the actual cert paths are hardcoded in `nginx.sh`)* | Legacy/unused — see EVALUATION.md |
+| `CERT_DIR`, `KEY`, `CRT`, `CSRCONF` | `/etc/nginx/certs`, … | *(declared but not read by any compose service — the actual cert paths are hardcoded in `nginx.sh`)* | Unused leftover |
 | `MARIADB_NAME` | `wordpress` | mariadb, wordpress | WordPress database name |
 | `MARIADB_USER` / `MARIADB_PWD` | *(yours)* | mariadb, wordpress, adminer (manually) | WordPress DB credentials, created by `mariadb.sh` |
 | `WP_TITLE` | `Inception Wordpress Site` | wordpress | Site title passed to `wp core install` |
-| `WP_PUBLIC_URL` | `https://oilyine.42.lu` | wordpress | `home`/`siteurl` set after install — no port suffix, since NGINX publishes only `443` |
+| `WP_PUBLIC_URL` | `https://oilyine.42.lu:8443` | wordpress | `home`/`siteurl` set after install — includes `:8443` to match the VM's forwarded port |
 | `WP_ADMIN_USER` / `WP_ADMIN_PWD` / `WP_ADMIN_MAIL` | *(yours — must not contain "admin"/"Admin")* | wordpress | WordPress administrator account created by `wp core install` |
 | `WP_USER` / `WP_USER_PWD` / `WP_MAIL` | *(yours)* | wordpress | A second, non-admin (`author`) WordPress user |
 | `WP_DB` / `WP_DB_USER` / `WP_DB_PWD` | mirrors `MARIADB_*` | docker-compose only | Re-exposed under `WP_*` names for the `wordpress` service environment |

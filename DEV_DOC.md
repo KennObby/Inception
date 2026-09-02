@@ -41,7 +41,7 @@ Only `nginx` (`443`), `ftp` (`21`, `21000-21010`) and `adminer` (`9090`) publish
 - Docker Engine and Docker Compose v2 (the `docker compose` subcommand, not the standalone `docker-compose` v1 binary).
 - Root or a user in the `docker` group.
 - `openssl` on the host is not required — the TLS certificate is generated *inside* the `nginx` container at startup.
-- Port `443` (and, for the bonus services, `9090` for Adminer, `21`/`21000-21010` for FTP) free on the host.
+- Ports `443`/`80` (and, for the bonus services, `9090` for Adminer, `21`/`21000-21010` for FTP) free on the host running the containers.
 - Optional, only for the personal VM development workflow (see [docs/QEMU.md](docs/QEMU.md)): `qemu-system-x86_64`, `qemu-img`, `python3`, `wget`, `ssh-keygen`, `curl`.
 
 ## First-time setup
@@ -66,7 +66,7 @@ make up
 ├── install-vm.sh              # Personal dev workflow only: unattended Debian install for QEMU
 ├── run-vm.sh                   # Personal dev workflow only: boots the VM with port forwards
 ├── installers/preseed.cfg       # Debian installer preseed
-└── srcs/                          # <- this is what's evaluated
+└── srcs/                          # the docker-compose stack itself
     ├── Makefile                    # docker compose up/down/clean-data/fclean/re/logs/ps
     ├── .env.example                  # template — copy to .env and fill in
     ├── docker-compose.yml             # the 7-service stack
@@ -79,7 +79,7 @@ make up
 
 ## Makefile usage
 
-**`srcs/Makefile`** — the actual stack, and the one used for evaluation:
+**`srcs/Makefile`** — the actual Docker Compose stack:
 
 | Target | Effect |
 |---|---|
@@ -103,7 +103,7 @@ make up
 | `make logs` | *(optional)* tail QEMU logs |
 | `make clean` | *(optional)* remove the VM's disk/ISO/logs |
 
-A bare `make` at the repository root runs the **first** target, `install` — i.e. it starts VM provisioning, not the Docker stack. This is by design (the VM targets exist for the student's own cross-platform development, not for evaluation), but it means the evaluation should always invoke the stack explicitly with `cd srcs && make up` (or `make -C srcs up` from the root), never a bare `make`.
+A bare `make` at the repository root runs the **first** target, `install` — i.e. it starts VM provisioning, not the Docker stack. To bring the stack up specifically, invoke it explicitly with `cd srcs && make up` (or `make -C srcs up` from the root).
 
 ## Docker Compose commands
 
@@ -122,7 +122,7 @@ Each service builds from its own `Dockerfile` under `srcs/requirements/`, all fr
 
 ## Data persistence
 
-Two named, host-backed Docker volumes satisfy the mandatory persistence requirement, plus one bonus volume:
+Three named, host-backed Docker volumes:
 
 | Volume | Container mount | Host path |
 |---|---|---|
@@ -132,7 +132,7 @@ Two named, host-backed Docker volumes satisfy the mandatory persistence requirem
 
 They use the `local` driver with `driver_opts: {type: none, o: bind, device: ...}` — a bind mount surfaced as a proper named volume, so it's both inspectable with `docker volume inspect` and durable on the host filesystem independent of container/image lifecycle.
 
-**Verifying persistence** (what an evaluator will do): make a change (post a comment, edit a page, add a plugin), then:
+**Verifying persistence:** make a change (post a comment, edit a page, add a plugin), then:
 
 ```sh
 docker compose -f srcs/docker-compose.yml down     # stop everything, keep volumes
@@ -142,12 +142,13 @@ docker compose -f srcs/docker-compose.yml up -d --build
 
 WordPress should come back already installed (no setup wizard), the database should still contain your data, and the change you made should still be visible on the site.
 
-## Configuration modification (defense scenario)
+## Changing a service's port
 
-During the defense, expect to be asked to change one service's port and prove the stack still works after a rebuild. Concretely, e.g. to move NGINX off 443 to `8843`:
+To move a service onto a different port, e.g. NGINX from `443` to `8843` inside the VM:
 
-1. Edit `srcs/docker-compose.yml`: change the `nginx` service's `ports:` entry from `"443:443"` to `"8843:443"` (the *container's* internal port stays 443 — only the host-side mapping changes).
-2. `cd srcs && make down && make up` (a `--build` is technically not required since no Dockerfile changed, but `make up` always does one, which is harmless).
-3. Verify: `curl -Ik https://<DOMAIN>:8843/` should now succeed, and `https://<DOMAIN>:443/` should refuse.
+1. Edit `srcs/docker-compose.yml`: change the `nginx` service's `ports:` entry from `"443:443"` to `"8843:443"` (the *container's* internal port stays 443 — only the VM-side mapping changes).
+2. Since the VM's own port is now different, update the matching `hostfwd` line in `run-vm.sh` (and the corresponding host port variable in `/.env`) so the outer host still reaches it, and update `WP_PUBLIC_URL` and the Keycloak issuer/redirect URLs in the entrypoint scripts to match if the externally-visible port changes too.
+3. `cd srcs && make down && make up` (a `--build` is technically not required since no Dockerfile changed, but `make up` always does one, which is harmless).
+4. Verify: `curl -Ik https://<DOMAIN>:8843/` (from inside the VM) should now succeed on the new port.
 
 The same pattern (edit the host-side half of one service's `ports:` mapping, then `make down && make up`) applies to any other service's exposed port (Adminer's `9090`, FTP's `21`, etc.).

@@ -26,7 +26,7 @@ KCADM="${KC_HOME}/bin/kcadm.sh"
 
 DB_URL="jdbc:mariadb://${KC_DB_URL_HOST}:${KC_DB_URL_PORT}/${KC_DB_URL_DATABASE}"
 
-KC_PUBLIC_URL="https://${DOMAIN}/auth"
+KC_PUBLIC_URL="https://${DOMAIN}:8443/auth"
 
 exec ${KC_EXEC} start \
   --db=${KC_DB} \
@@ -77,15 +77,15 @@ if [ -z "${CLIENT_UUID}" ]; then
         -s directAccessGrantsEnabled=false \
         -s serviceAccountsEnabled=false \
         -s secret="${KC_CLIENT_SECRET}" \
-        -s "redirectUris=[\"https://${DOMAIN}/*\"]" \
-        -s "webOrigins=[\"https://${DOMAIN}\"]"
+        -s "redirectUris=[\"https://${DOMAIN}:8443/*\"]" \
+        -s "webOrigins=[\"https://${DOMAIN}:8443\"]"
 
 else
     echo "Client '${KC_CLIENT_ID}' already exists, syncing config..."
     "${KCADM}" update "clients/${CLIENT_UUID}" -r "${KC_REALM}" \
         -s secret="${KC_CLIENT_SECRET}" \
-        -s "redirectUris=[\"https://${DOMAIN}/*\"]" \
-        -s "webOrigins=[\"https://${DOMAIN}\"]"
+        -s "redirectUris=[\"https://${DOMAIN}:8443/*\"]" \
+        -s "webOrigins=[\"https://${DOMAIN}:8443\"]"
 
 fi
 

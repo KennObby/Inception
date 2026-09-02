@@ -1,6 +1,6 @@
 # QEMU VM workflow (`install-vm.sh` / `run-vm.sh`)
 
-This covers the optional Debian VM provisioning scripts at the repository root. They exist purely as a **personal development convenience** — for building and testing the `srcs/` Docker stack on a machine without direct Docker/root access (e.g. a personal laptop, or a 42 cluster session before Docker is available). They are **not** part of the mandatory Inception infrastructure and are **not** what gets evaluated — see [docs/EVALUATION.md](EVALUATION.md) and [DEV_DOC.md](../DEV_DOC.md) for the actual evaluated path (`cd srcs && make up`, run directly on whatever machine has Docker).
+This covers the Debian VM provisioning scripts at the repository root — the standard way this project is run and tested: a QEMU-managed Debian VM that runs the `srcs/` Docker stack, reached from the host through QEMU's NAT port forwarding.
 
 ## What the two scripts do
 
@@ -51,14 +51,14 @@ make clean        # remove $IMAGES_DIR and $LOGS_DIR (disk image, ISO, logs)
    | Host port (`.env` var) | Forwarded to VM port | Purpose |
    |---|---|---|
    | `SSH_HOST_PORT` (`2222`) | `22` | `ssh -p 2222 <user>@localhost` |
-   | `HTTP_HOST_PORT` (`8080`) | `80` | Redirects to HTTPS — see the port-80 note below |
-   | `HTTPS_HOST_PORT` (`8443`) | `443` | Browse to the WordPress site from the host |
+   | `HTTP_HOST_PORT` (`8080`) | `80` | Redirects to HTTPS |
+   | `HTTPS_HOST_PORT` (`8443`) | `443` | Browse to the WordPress site from the host — this is the port that matters, since it's the only one that actually reaches the VM's NGINX from outside |
    | `KEYCLOAK_HOST_PORT` (`8081`) | `8080` | Currently unused — see the note in [docs/CONFIGURATION.md](CONFIGURATION.md); Keycloak is reached through NGINX's `/auth/` proxy instead |
    | `ADMINER_HOST_PORT` (`9090`) | `9090` | Adminer web UI |
    | `FTP_HOST_PORT` (`2121`) | `21` | FTP control connection |
    | `FTP_PASSIVE_MIN`–`FTP_PASSIVE_MAX` (`21000`–`21010`) | same range, 1:1 | FTP passive-mode data connections |
 
-   `srcs/docker-compose.yml`'s `nginx` service currently publishes both `443` and `80` (redirecting to `443`) for everyday convenience. The evaluation criteria require `443` only — see [docs/EVALUATION.md](EVALUATION.md#simple-setup) for the exact lines to revert before your defense, and remove this `HTTP_HOST_PORT` forward along with it if you do.
+   `srcs/docker-compose.yml`'s `nginx` service publishes both `443` and `80` (redirecting to `443`). `WP_PUBLIC_URL`, the Keycloak issuer/redirect URLs, and NGINX's own forwarded-port headers are all set to `:8443` to match this forward — see [docs/CONFIGURATION.md](CONFIGURATION.md). A client *inside* the VM (e.g. over the SSH session used to reach it) talks to the containers directly and doesn't need `:8443`; anything outside the VM does.
 4. Logs QEMU's own stderr/debug output to `$LOGS_DIR/qemu-host.log` and `qemu-debug.log`, and the guest's serial console to `guest-serial.log`.
 
 ## Typical workflow
@@ -73,9 +73,7 @@ cd ~/Inception/srcs
 cp .env.example .env && $EDITOR .env
 make up
 # from the host machine's browser:
-#   https://oilyine.42.lu:8443/   (the :8443 here is the VM's NAT port forward,
-#                                   not what an actual evaluator will type —
-#                                   see docs/EVALUATION.md)
+#   https://oilyine.42.lu:8443/   (:8443 is the VM's NAT port forward — see above)
 ```
 
 ## Troubleshooting

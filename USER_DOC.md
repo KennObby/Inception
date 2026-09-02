@@ -25,7 +25,7 @@ All services should show as `Up` (mariadb and adminer additionally show `healthy
 make down
 ```
 
-This stops and removes the containers but **keeps the data volumes** — restart with `make up` and the site, database, and cache are exactly as you left them (see [DEV_DOC.md](DEV_DOC.md#data-persistence) for the persistence test used during evaluation).
+This stops and removes the containers but **keeps the data volumes** — restart with `make up` and the site, database, and cache are exactly as you left them (see [DEV_DOC.md](DEV_DOC.md#data-persistence)).
 
 To wipe everything, including the data:
 
@@ -35,21 +35,22 @@ make fclean
 
 ## Accessing the website
 
-Open `https://<DOMAIN>/` in a browser, where `<DOMAIN>` is the value of `DOMAIN` in `srcs/.env` (e.g. your 42 login's domain). The certificate is self-signed, so the browser will show a warning — accept it to continue.
+Open `https://<DOMAIN>:8443/` in a browser, where `<DOMAIN>` is the value of `DOMAIN` in `srcs/.env`. The `:8443` matters: the browser reaches the VM through QEMU's NAT (`run-vm.sh` forwards the host's `8443` to the VM's `443`), so that's the port that's actually reachable from outside the VM — WordPress and Keycloak are both configured to generate links with `:8443` baked in, matching this. The certificate is self-signed, so the browser will show a warning — accept it to continue.
 
-- `http://<DOMAIN>/` (port 80) redirects to `https://<DOMAIN>/` (port 443). **This redirect is a day-to-day convenience only — it must be removed before the actual 42 evaluation**, which requires NGINX reachable on port 443 exclusively (`http://` must refuse the connection, not redirect). See the note in [docs/EVALUATION.md](docs/EVALUATION.md#simple-setup).
-- If the domain doesn't resolve on your network, add a hosts entry: `echo "127.0.0.1 <DOMAIN>" | sudo tee -a /etc/hosts` (adjust the IP if Docker is running on a different host). This is very often the actual cause when the site "doesn't work" locally — check this before assuming NGINX or WordPress is broken.
+- `http://<DOMAIN>:8080/` (port 80, forwarded from `HTTP_HOST_PORT`) redirects to `https://<DOMAIN>:8443/`.
+- If the domain doesn't resolve on your network, add a hosts entry on the machine running the browser (not inside the VM): `echo "127.0.0.1 <DOMAIN>" | sudo tee -a /etc/hosts` if the browser and the VM's forwarded ports are on the same machine, or the VM host's actual IP otherwise. This is very often the actual cause when the site "doesn't work" — check this before assuming NGINX or WordPress is broken.
+- If you're testing `curl` or similar *from inside* the VM (e.g. over SSH), you're on the same network namespace as the containers and can reach the site directly on `https://<DOMAIN>/` (no `:8443` needed) — that's expected and doesn't mean the outside-the-VM, `:8443` path is broken.
 
 ## Accessing the admin panels
 
 | Panel | URL | Sign in with |
 |---|---|---|
-| WordPress site | `https://<DOMAIN>/` | — |
-| WordPress admin dashboard | `https://<DOMAIN>/wp-admin/` | `WP_ADMIN_USER` / `WP_ADMIN_PWD` from `srcs/.env` |
-| WordPress (regular user) | `https://<DOMAIN>/wp-login.php` | `WP_USER` / `WP_USER_PWD` |
+| WordPress site | `https://<DOMAIN>:8443/` | — |
+| WordPress admin dashboard | `https://<DOMAIN>:8443/wp-admin/` | `WP_ADMIN_USER` / `WP_ADMIN_PWD` from `srcs/.env` |
+| WordPress (regular user) | `https://<DOMAIN>:8443/wp-login.php` | `WP_USER` / `WP_USER_PWD` |
 | Adminer (database admin) | `http://<DOMAIN>:9090/` | System: MySQL, Server: `mariadb`, Username: `MARIADB_USER`, Password: `MARIADB_PWD`, Database: `MARIADB_NAME` |
-| Keycloak admin console | `https://<DOMAIN>/auth/admin/` | `KC_ADMIN` / `KC_ADMIN_PWD` |
-| WordPress login via SSO | `https://<DOMAIN>/wp-login.php` → "OpenID Connect Generic" button | `KC_TEST_USER` / `KC_TEST_USER_PWD` |
+| Keycloak admin console | `https://<DOMAIN>:8443/auth/admin/` | `KC_ADMIN` / `KC_ADMIN_PWD` |
+| WordPress login via SSO | `https://<DOMAIN>:8443/wp-login.php` → "OpenID Connect Generic" button | `KC_TEST_USER` / `KC_TEST_USER_PWD` |
 
 As the WordPress admin, you can edit any page from **Pages → All Pages → Edit**; the change is visible on the live site immediately (no cache purge needed unless Redis object caching is holding a stale copy — `wp cache flush` clears it, see below).
 
@@ -70,8 +71,8 @@ docker compose -f srcs/docker-compose.yml ps                 # all 7 containers,
 docker network ls | grep inception                            # the shared Docker network exists
 docker volume ls | grep -E "mariadb_data|wordpress_data|redis_data"
 
-curl -I http://<DOMAIN>/          # currently: 301 → https://<DOMAIN>/ (see the note above about evaluation)
-openssl s_client -connect <DOMAIN>:443 -tls1_2 </dev/null 2>/dev/null | grep subject=
+curl -I http://<DOMAIN>:8080/     # 301 → https://<DOMAIN>:8443/
+openssl s_client -connect <DOMAIN>:8443 -tls1_2 </dev/null 2>/dev/null | grep subject=
 
 docker exec -it wordpress wp --allow-root --path=/var/www/wordpress core is-installed
 docker exec -it wordpress wp --allow-root --path=/var/www/wordpress user list --fields=user_login,roles
@@ -81,4 +82,4 @@ docker exec -it mariadb mariadb -uroot -e "SHOW DATABASES;"    # WordPress + Key
 docker exec -it redis redis-cli ping                            # PONG
 ```
 
-See [docs/BONUS.md](docs/BONUS.md) for FTP, Adminer and Keycloak-specific checks, and [docs/EVALUATION.md](docs/EVALUATION.md) for the full evaluation walkthrough.
+See [docs/BONUS.md](docs/BONUS.md) for FTP, Adminer and Keycloak-specific checks.
