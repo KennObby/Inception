@@ -87,8 +87,8 @@ define ('WP_REDIS_HOST', 'redis');
 define ('WP_REDIS_PORT', 6379);
 
 
-define('WP_SITEURL', 'https://oilyine.42.lu:8443');
-define('WP_HOME', 'https://oilyine.42.lu:8443');
+define('WP_SITEURL', 'https://oilyine.42.lu');
+define('WP_HOME', 'https://oilyine.42.lu');
 
 /* That's all, stop editing! Happy blogging. */
 

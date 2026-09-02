@@ -41,7 +41,6 @@ esac
 
 NIC_OPTS="user,model=virtio,\
 hostfwd=tcp::${SSH_HOST_PORT}-:22,\
-hostfwd=tcp::${HTTP_HOST_PORT}-:80,\
 hostfwd=tcp::${HTTPS_HOST_PORT}-:443,\
 hostfwd=tcp::${KEYCLOAK_HOST_PORT}-:8080,\
 hostfwd=tcp::${ADMINER_HOST_PORT}-:9090,\
