@@ -84,7 +84,7 @@ make up
 | Target | Effect |
 |---|---|
 | `make up` | Create `data/{mariadb,wordpress,redis}` under `/home/<login>/`, then `docker compose up -d --build` |
-| `make down` | `docker compose down -v` |
+| `make down` | `docker compose down` (data volumes are kept — use `make fclean` to also wipe them) |
 | `make clean-data` | Interactive `rm -rf` of all three data dirs (asks for confirmation) |
 | `make fclean` | `down` + `clean-data` + `docker system prune -af --volumes` |
 | `make re` | `fclean` then `up` — full clean rebuild |
