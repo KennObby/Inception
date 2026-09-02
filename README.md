@@ -30,6 +30,7 @@ Further reference:
 - **[docs/CONFIGURATION.md](docs/CONFIGURATION.md)** — every environment variable, what reads it, and its purpose.
 - **[docs/BONUS.md](docs/BONUS.md)** — a walkthrough of each bonus service with example commands.
 - **[docs/EVALUATION.md](docs/EVALUATION.md)** — the official 42 Inception evaluation checklist, worked through against this exact codebase.
+- **[docs/QEMU.md](docs/QEMU.md)** — how the optional `install-vm.sh`/`run-vm.sh` personal-development VM workflow works.
 
 ## Resources
 

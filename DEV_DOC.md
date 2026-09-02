@@ -42,7 +42,7 @@ Only `nginx` (`443`), `ftp` (`21`, `21000-21010`) and `adminer` (`9090`) publish
 - Root or a user in the `docker` group.
 - `openssl` on the host is not required — the TLS certificate is generated *inside* the `nginx` container at startup.
 - Port `443` (and, for the bonus services, `9090` for Adminer, `21`/`21000-21010` for FTP) free on the host.
-- Optional, only for the personal VM development workflow described below: `qemu-system-x86_64`, `qemu-img`, `python3`, `wget`, `ssh-keygen`, `curl`.
+- Optional, only for the personal VM development workflow (see [docs/QEMU.md](docs/QEMU.md)): `qemu-system-x86_64`, `qemu-img`, `python3`, `wget`, `ssh-keygen`, `curl`.
 
 ## First-time setup
 
@@ -91,7 +91,7 @@ make up
 | `make logs` | `docker compose logs -f` |
 | `make ps` | `docker compose ps` |
 
-**Root `Makefile`** — a thin convenience wrapper, plus the optional VM workflow:
+**Root `Makefile`** — a thin convenience wrapper, plus the optional VM workflow (full detail in [docs/QEMU.md](docs/QEMU.md)):
 
 | Target | Effect |
 |---|---|
