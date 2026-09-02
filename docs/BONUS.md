@@ -1,6 +1,6 @@
 # Bonus services
 
-The mandatory part is NGINX + WordPress + MariaDB (see the [README](../README.md#architecture)). This repo additionally implements four bonus services, each its own Dockerfile under `srcs/requirements/bonus/`. Per the Inception subject, bonus is only graded if the mandatory part is implemented perfectly — keep that in mind when reading [EVALUATION.md](EVALUATION.md).
+The mandatory part is NGINX + WordPress + MariaDB (see the architecture diagram in [DEV_DOC.md](../DEV_DOC.md#architecture)). This repo additionally implements four bonus services, each its own Dockerfile under `srcs/requirements/bonus/`. Per the Inception subject, bonus is only graded if the mandatory part is implemented perfectly — keep that in mind when reading [EVALUATION.md](EVALUATION.md).
 
 ## Redis — object cache
 
@@ -47,7 +47,7 @@ lftp -u "$FTP_USER,$FTP_PWD" \
      oilyine.42.lu -p 2121
 ```
 
-> `pasv_address=127.0.0.1` in `vsftpd.conf` tells the server to advertise `127.0.0.1` as the address for passive data connections. That only works when the FTP client runs on the same machine as the container. Connecting from the actual VM host (through the `run-vm.sh` port forward) or from outside will complete the control connection and login, but passive data transfers (`ls`, `get`, `put`) are likely to hang or fail because the client is told to open the data channel to `127.0.0.1` instead of the reachable host/domain. See [EVALUATION.md](EVALUATION.md#ftp-passive-mode-address) — this is worth testing end-to-end before defense and, if broken, fixing by setting `pasv_address` to `$DOMAIN` or the VM's routable IP.
+> `pasv_address=127.0.0.1` in `vsftpd.conf` tells the server to advertise `127.0.0.1` as the address for passive data connections. That only works when the FTP client runs on the same machine as the container. Connecting from the actual VM host (through the `run-vm.sh` port forward) or from outside will complete the control connection and login, but passive data transfers (`ls`, `get`, `put`) are likely to hang or fail because the client is told to open the data channel to `127.0.0.1` instead of the reachable host/domain — this is worth testing end-to-end before defense (see the Bonus table in [EVALUATION.md](EVALUATION.md#bonus)), and, if broken, fixing by setting `pasv_address` to `$DOMAIN` or the VM's routable IP.
 
 ## Adminer — DB admin UI
 
@@ -70,9 +70,9 @@ Builds Keycloak 26.4.2 from the official release tarball (`kc.sh build`), then `
 1. Starts Keycloak with `--http-relative-path=/auth` (so it lines up with NGINX's `location ^~ /auth/` proxy) and `--proxy-headers=xforwarded`, backed by its own MariaDB database (`KC_DB_URL_DATABASE=keycloak`).
 2. Waits for `http://localhost:8080/auth/realms/master` to answer.
 3. Logs in as the bootstrap admin (`KEYCLOAK_ADMIN`/`KEYCLOAK_ADMIN_PASSWORD`) via `kcadm.sh`.
-4. Idempotently creates (or updates) the `$KC_REALM` realm, a confidential `$KC_CLIENT_ID` client with `redirectUris`/`webOrigins` scoped to `https://$DOMAIN:8443`, and a test end user (`$KC_TEST_USER`).
+4. Idempotently creates (or updates) the `$KC_REALM` realm, a confidential `$KC_CLIENT_ID` client with `redirectUris`/`webOrigins` scoped to `https://$DOMAIN`, and a test end user (`$KC_TEST_USER`).
 
-WordPress's own `wordpress.sh` configures the `daggerhart-openid-connect-generic` plugin with matching issuer/endpoint URLs — internal ones (`http://keycloak:8080/auth/...`) for server-to-server calls (token, userinfo, JWKS) and external ones (`https://$DOMAIN:8443/auth/...`) for the browser-facing authorization/login redirect.
+WordPress's own `wordpress.sh` configures the `daggerhart-openid-connect-generic` plugin with matching issuer/endpoint URLs — internal ones (`http://keycloak:8080/auth/...`) for server-to-server calls (token, userinfo, JWKS) and external ones (`https://$DOMAIN/auth/...`) for the browser-facing authorization/login redirect.
 
 **Try the SSO flow:**
 
@@ -81,7 +81,7 @@ WordPress's own `wordpress.sh` configures the `daggerhart-openid-connect-generic
 docker exec -it keycloak curl -s http://localhost:8080/auth/realms/Inception/.well-known/openid-configuration
 ```
 
-Then, in a browser: go to `https://oilyine.42.lu:8443/wp-login.php`, click **"OpenID Connect Generic"**, and log in with `$KC_TEST_USER` / `$KC_TEST_USER_PWD`. With `OIDC_CREATE_IF_DOES_NOT_EXIST=1` a matching WordPress user is auto-provisioned on first login.
+Then, in a browser: go to `https://oilyine.42.lu/wp-login.php`, click **"OpenID Connect Generic"**, and log in with `$KC_TEST_USER` / `$KC_TEST_USER_PWD`. With `OIDC_CREATE_IF_DOES_NOT_EXIST=1` a matching WordPress user is auto-provisioned on first login.
 
 **Inspect/administer the realm directly:**
 
@@ -92,4 +92,4 @@ docker exec -it keycloak /opt/keycloak/bin/kcadm.sh config credentials \
 docker exec -it keycloak /opt/keycloak/bin/kcadm.sh get users -r Inception
 ```
 
-Or via the admin console (proxied through NGINX): `https://oilyine.42.lu:8443/auth/admin/` with `$KC_ADMIN`/`$KC_ADMIN_PWD`.
+Or via the admin console (proxied through NGINX): `https://oilyine.42.lu/auth/admin/` with `$KC_ADMIN`/`$KC_ADMIN_PWD`.

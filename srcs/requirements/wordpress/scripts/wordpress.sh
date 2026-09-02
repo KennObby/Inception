@@ -50,7 +50,7 @@ if ! grep -q "WP_REDIS_HOST" /var/www/wordpress/wp-config.php; then
 fi
 
 if ! grep -q "OIDC_CLIENT_ID" /var/www/wordpress/wp-config.php; then
-    KC_ISSUER_BASE="https://${DOMAIN}:8443/auth/realms/${KC_REALM}"
+    KC_ISSUER_BASE="https://${DOMAIN}/auth/realms/${KC_REALM}"
     KC_INTERNAL_BASE="http://keycloak:8080/auth/realms/${KC_REALM}"
 
     wp --allow-root --path=/var/www/wordpress config set OIDC_LOGIN_TYPE              "button"                                               --type=constant

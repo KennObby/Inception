@@ -1,6 +1,7 @@
 services:
   mariadb:
     container_name: mariadb
+    image: mariadb
     build: ./requirements/mariadb
     restart: unless-stopped
     networks:
@@ -22,6 +23,7 @@ services:
 
   wordpress:
     container_name: wordpress
+    image: wordpress
     build: ./requirements/wordpress
     restart: unless-stopped
     depends_on:
@@ -55,6 +57,7 @@ services:
 
   nginx:
     container_name: nginx
+    image: nginx
     build: ./requirements/nginx
     restart: unless-stopped
     depends_on:
@@ -63,7 +66,6 @@ services:
       - inception
     ports:
       - "443:443"
-      - "80:80"
     volumes:
       - wordpress_data:/var/www/wordpress:ro
     environment:
@@ -71,6 +73,7 @@ services:
 
   redis:
     container_name: redis
+    image: redis
     build: ./requirements/bonus/redis
     restart: unless-stopped
     networks:
@@ -80,6 +83,7 @@ services:
 
   ftp:
     container_name: ftp
+    image: ftp
     build: ./requirements/bonus/ftp
     restart: unless-stopped
     depends_on:
@@ -98,6 +102,7 @@ services:
 
   adminer:
     container_name: adminer
+    image: adminer
     build: ./requirements/bonus/adminer
     restart: unless-stopped
     depends_on:
@@ -110,6 +115,7 @@ services:
   
   keycloak:
     container_name: keycloak
+    image: keycloak
     build: ./requirements/bonus/keycloak
     restart: unless-stopped
     depends_on:
@@ -144,16 +150,16 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/Inception/data/mariadb
+      device: /home/oilyine/data/mariadb
   wordpress_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/Inception/data/wordpress
+      device: /home/oilyine/data/wordpress
   redis_data:
     driver: local
     driver_opts:
       type: none
       o: bind
-      device: /home/oilyine/Inception/data/redis
+      device: /home/oilyine/data/redis

@@ -23,3 +23,8 @@ vm-credentials.txt
 
 # Local overrides
 .env.local
+
+# Stack secrets: DB/WordPress/FTP/Keycloak credentials.
+# Copy srcs/.env.example to srcs/.env and fill in real values locally;
+# never commit srcs/.env itself.
+/srcs/.env

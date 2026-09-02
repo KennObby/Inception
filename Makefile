@@ -23,7 +23,7 @@ down:
 	docker compose -f srcs/docker-compose.yml down
 
 clean-data:
-	sudo rm -rf /home/oilyine/Inception/data/mariadb/*
-	sudo rm -rf /home/oilyine/Inception/data/wordpress/*
+	sudo rm -rf /home/oilyine/data/mariadb/*
+	sudo rm -rf /home/oilyine/data/wordpress/*
 
 fclean: down clean-data

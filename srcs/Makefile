@@ -1,6 +1,6 @@
 .PHONY: up down clean-data fclean re logs ps
 
-DATA_DIR := /home/oilyine/Inception/data
+DATA_DIR := /home/oilyine/data
 COMPOSE_FILE := docker-compose.yml
 
 up: setup-data
