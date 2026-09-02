@@ -66,6 +66,7 @@ services:
       - inception
     ports:
       - "443:443"
+      - "80:80"
     volumes:
       - wordpress_data:/var/www/wordpress:ro
     environment:

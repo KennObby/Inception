@@ -51,13 +51,14 @@ make clean        # remove $IMAGES_DIR and $LOGS_DIR (disk image, ISO, logs)
    | Host port (`.env` var) | Forwarded to VM port | Purpose |
    |---|---|---|
    | `SSH_HOST_PORT` (`2222`) | `22` | `ssh -p 2222 <user>@localhost` |
+   | `HTTP_HOST_PORT` (`8080`) | `80` | Redirects to HTTPS — see the port-80 note below |
    | `HTTPS_HOST_PORT` (`8443`) | `443` | Browse to the WordPress site from the host |
    | `KEYCLOAK_HOST_PORT` (`8081`) | `8080` | Currently unused — see the note in [docs/CONFIGURATION.md](CONFIGURATION.md); Keycloak is reached through NGINX's `/auth/` proxy instead |
    | `ADMINER_HOST_PORT` (`9090`) | `9090` | Adminer web UI |
    | `FTP_HOST_PORT` (`2121`) | `21` | FTP control connection |
    | `FTP_PASSIVE_MIN`–`FTP_PASSIVE_MAX` (`21000`–`21010`) | same range, 1:1 | FTP passive-mode data connections |
 
-   (There is no forward for plain HTTP/port 80 — `srcs/docker-compose.yml`'s `nginx` service only publishes `443`, matching the "NGINX accessible on port 443 only" evaluation requirement.)
+   `srcs/docker-compose.yml`'s `nginx` service currently publishes both `443` and `80` (redirecting to `443`) for everyday convenience. The evaluation criteria require `443` only — see [docs/EVALUATION.md](EVALUATION.md#simple-setup) for the exact lines to revert before your defense, and remove this `HTTP_HOST_PORT` forward along with it if you do.
 4. Logs QEMU's own stderr/debug output to `$LOGS_DIR/qemu-host.log` and `qemu-debug.log`, and the guest's serial console to `guest-serial.log`.
 
 ## Typical workflow

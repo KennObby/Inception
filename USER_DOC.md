@@ -37,8 +37,8 @@ make fclean
 
 Open `https://<DOMAIN>/` in a browser, where `<DOMAIN>` is the value of `DOMAIN` in `srcs/.env` (e.g. your 42 login's domain). The certificate is self-signed, so the browser will show a warning — accept it to continue.
 
-- Port **443** is the only way in. Port 80 is not published by NGINX at all; `http://<DOMAIN>/` will simply refuse the connection.
-- If the domain doesn't resolve on your network, add a hosts entry: `echo "127.0.0.1 <DOMAIN>" | sudo tee -a /etc/hosts` (adjust the IP if Docker is running on a different host).
+- `http://<DOMAIN>/` (port 80) redirects to `https://<DOMAIN>/` (port 443). **This redirect is a day-to-day convenience only — it must be removed before the actual 42 evaluation**, which requires NGINX reachable on port 443 exclusively (`http://` must refuse the connection, not redirect). See the note in [docs/EVALUATION.md](docs/EVALUATION.md#simple-setup).
+- If the domain doesn't resolve on your network, add a hosts entry: `echo "127.0.0.1 <DOMAIN>" | sudo tee -a /etc/hosts` (adjust the IP if Docker is running on a different host). This is very often the actual cause when the site "doesn't work" locally — check this before assuming NGINX or WordPress is broken.
 
 ## Accessing the admin panels
 
@@ -70,7 +70,7 @@ docker compose -f srcs/docker-compose.yml ps                 # all 7 containers,
 docker network ls | grep inception                            # the shared Docker network exists
 docker volume ls | grep -E "mariadb_data|wordpress_data|redis_data"
 
-curl -I http://<DOMAIN>/          # connection refused/times out — port 80 is not exposed
+curl -I http://<DOMAIN>/          # currently: 301 → https://<DOMAIN>/ (see the note above about evaluation)
 openssl s_client -connect <DOMAIN>:443 -tls1_2 </dev/null 2>/dev/null | grep subject=
 
 docker exec -it wordpress wp --allow-root --path=/var/www/wordpress core is-installed

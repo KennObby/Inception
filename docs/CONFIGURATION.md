@@ -21,6 +21,7 @@ This project reads configuration from two separate `.env` files: one for the QEM
 | `AUDIO_POLICY` | `off` | `install-vm.sh` | `on` enables a PulseAudio device |
 | `SAVE_CREDENTIALS` | `1` | `install-vm.sh` | Write generated VM user/password to `$LOGS_DIR/vm-credentials.txt` |
 | `SSH_HOST_PORT` | `2222` | both | Host port forwarded to the VM's SSH (`22`) |
+| `HTTP_HOST_PORT` | `8080` | `run-vm.sh` | Host port forwarded to the VM's port `80` |
 | `HTTPS_HOST_PORT` | `8443` | `run-vm.sh` | Host port forwarded to the VM's port `443`, for the personal-VM dev workflow only |
 | `KEYCLOAK_HOST_PORT` | `8081` | `run-vm.sh` | Host port forwarded to the VM's port `8080` (see note below) |
 | `ADMINER_HOST_PORT` | `9090` | `run-vm.sh` | Host port forwarded to the VM's port `9090` |
@@ -29,7 +30,9 @@ This project reads configuration from two separate `.env` files: one for the QEM
 
 Runtime-only overrides (not in `.env`, passed on the command line): `UI_POLICY`, `UNATTENDED`, `VM_USER`, `VM_PASS`, `VM_PASS_HASH`, `PUBKEY_PATH`, `PRESEED_PORT`, `DEBIAN_SUITE`. E.g. `make install` is literally `UI_POLICY=auto UNATTENDED=1 ./install-vm.sh`.
 
-> This VM layer is a personal development convenience (useful on a machine without direct Docker/root access) and is not part of the mandatory Inception infrastructure — it is not what gets evaluated. `srcs/docker-compose.yml` publishes only port `443` for NGINX (no `80`), so URLs in `srcs/.env` and the entrypoint scripts use bare `https://$DOMAIN` with no port suffix. `HTTP_HOST_PORT` has been removed from `run-vm.sh` accordingly, since nothing listens on port 80 anymore.
+> This VM layer is a personal development convenience (useful on a machine without direct Docker/root access) and is not part of the mandatory Inception infrastructure — it is not what gets evaluated. `srcs/.env` and the entrypoint scripts use bare `https://$DOMAIN` with no port suffix.
+>
+> **Port 80:** `srcs/docker-compose.yml`'s `nginx` service currently publishes both `443` and `80` (with `80` redirecting to `443`), for everyday local convenience. The real evaluation criteria require NGINX reachable on port **443 only** — `http://` must refuse the connection, not redirect. Remove the `"80:80"` line from `nginx`'s `ports:` and the `listen 80 { ... }` server block from `nginx.conf` before your defense; see [EVALUATION.md](EVALUATION.md#simple-setup) for the exact revert.
 >
 > **Note on `KEYCLOAK_HOST_PORT`:** `run-vm.sh` forwards this host port to the VM's TCP `8080`, but nothing inside the VM (outside Docker) listens there — the `keycloak` container's `8080` is only published to the `inception` Docker network, not to the VM host (`docker-compose.yml` has no `ports:` entry for `keycloak`). Keycloak is reached exclusively through NGINX's `/auth/` reverse-proxy on `443`. This host forward is effectively unused; see [EVALUATION.md](EVALUATION.md) for detail.
 

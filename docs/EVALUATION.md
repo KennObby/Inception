@@ -55,12 +55,17 @@ Procedural — be ready to explain, in your own words:
 
 ## Simple setup
 
-- *"NGINX accessible on port 443 only."* **[x]** — `srcs/docker-compose.yml`'s `nginx` service now publishes only `"443:443"`; the port-80 redirect server block has been removed from `nginx.conf` entirely, so `http://<DOMAIN>/` gets a connection refusal, not a redirect.
+- *"NGINX accessible on port 443 only."* **[ ] NOT currently compliant — revert before your defense.** `srcs/docker-compose.yml`'s `nginx` service currently publishes both `"443:443"` and `"80:80"`, with `nginx.conf` redirecting 80 → 443. This was put back in deliberately for everyday local development (so a plain `http://` typo doesn't just hang), but the evaluation explicitly requires `http://` to refuse the connection, not redirect. **To revert before evaluation:**
+  1. In `srcs/docker-compose.yml`, remove `- "80:80"` from the `nginx` service's `ports:`.
+  2. In `srcs/requirements/nginx/scripts/nginx.conf`, remove the `server { listen 80; ... return 301 ...; }` block (keep only the `listen 443 ssl;` server block).
+  3. If you also use the VM workflow, remove the `hostfwd=tcp::${HTTP_HOST_PORT}-:80,` line from `run-vm.sh`.
+  4. `cd srcs && make down && make up`, then confirm:
   ```sh
-  curl -I http://<DOMAIN>/       # connection refused / times out
+  curl -I http://<DOMAIN>/       # must now refuse the connection / time out, not redirect
   ```
 - *"A SSL/TLS certificate is used."* **[x]** — `nginx.sh` generates a self-signed cert with `openssl req -x509` at container start; `nginx.conf` sets `ssl_certificate`/`ssl_certificate_key` for the 443 server block.
-- *"WordPress is properly installed and configured (no install wizard); reachable at `https://login.42.fr`; not reachable over `http://login.42.fr`."* **[x]** — `wordpress.sh` runs `wp core install` non-interactively before php-fpm ever serves a request; `WP_PUBLIC_URL` in `srcs/.env` is now `https://<DOMAIN>` with no port suffix, matching the bare-443 NGINX setup. Since NGINX only publishes 443, there is no `:8443`-style port in the URL the evaluator will type — it should be exactly `https://<your-login-domain>/`.
+- *"WordPress is properly installed and configured (no install wizard); reachable at `https://login.42.fr`; not reachable over `http://login.42.fr`."* WordPress itself: **[x]** — `wordpress.sh` runs `wp core install` non-interactively before php-fpm ever serves a request; `WP_PUBLIC_URL` in `srcs/.env` is `https://<DOMAIN>` with no port suffix, so the URL to type is exactly `https://<your-login-domain>/`, no `:8443`. The "not reachable over `http://`" half: **[ ]** — see the port-80 revert above; as currently configured `http://` redirects instead of refusing.
+- *"login" in `https://login.42.fr` is a placeholder for your actual 42 username — `DOMAIN` in `srcs/.env` must be your real, resolvable domain (this project uses `oilyine.42.lu`). Typing the literal string `login.42.fr` won't resolve to anything and will look like a broken deployment even when the containers are perfectly healthy.
 
 ## Docker basics
 
@@ -83,7 +88,7 @@ Procedural — be ready to explain, in your own words:
 
 - *"Dockerfile exists."* **[x]** `srcs/requirements/nginx/Dockerfile`.
 - *"Container created via `docker compose ps`."* **[!]** procedural.
-- *"HTTP (port 80) must not connect."* **[x]** — see "Simple setup" above; port 80 is not published at all.
+- *"HTTP (port 80) must not connect."* **[ ] NOT currently compliant** — see the revert steps under "Simple setup" above.
 - *"`https://login.42.fr/` shows the configured WordPress site, not the install wizard."* **[x]**, pending the procedural check.
 - *"TLS v1.2 or v1.3 demonstrated; self-signed is fine."* **[x]** — `ssl_protocols TLSv1.2 TLSv1.3;` in `nginx.conf`, nothing older enabled.
   ```sh
@@ -152,10 +157,13 @@ Not implemented: the static-site bonus option (not required — the subject offe
 
 1. `WP_ADMIN_USER` no longer contains "admin" (`admin` → `oilyine_owner`).
 2. `srcs/.env` removed from git tracking and added to `.gitignore`; `srcs/.env.example` (placeholder values) committed in its place.
-3. NGINX no longer publishes port 80; the HTTP→HTTPS redirect server block was removed from `nginx.conf` (port 80 now refuses connections, per the subject's explicit requirement, rather than redirecting).
-4. Every hardcoded `:8443` was removed from `nginx.conf`, `srcs/.env`, `wordpress.sh`, `keycloak.sh` and the (unused) `wp-config.php`, so the site and Keycloak are reachable at bare `https://$DOMAIN`.
-5. `docker-compose.yml` volume host paths changed from `/home/oilyine/Inception/data/...` to `/home/oilyine/data/...` to match "`/home/login/data/`" literally; `srcs/Makefile` and the root `Makefile` updated to match.
-6. Each service in `docker-compose.yml` now has an explicit `image:` matching its service/container name.
-7. `run-vm.sh`'s now-pointless `HTTP_HOST_PORT` forward (port 80 has nothing listening on it anymore) was removed.
+3. Every hardcoded `:8443` was removed from `nginx.conf`, `srcs/.env`, `wordpress.sh`, `keycloak.sh` and the (unused) `wp-config.php`, so the site and Keycloak are reachable at bare `https://$DOMAIN`.
+4. `docker-compose.yml` volume host paths changed from `/home/oilyine/Inception/data/...` to `/home/oilyine/data/...` to match "`/home/login/data/`" literally; `srcs/Makefile` and the root `Makefile` updated to match.
+5. Each service in `docker-compose.yml` now has an explicit `image:` matching its service/container name.
+6. `srcs/Makefile`'s `down` target no longer passes `-v` to `docker compose down` — it was silently deleting the data volumes on every stop, contradicting the persistence requirement. Destructive teardown is still available via `make fclean`.
+
+## Known temporary deviation: port 80 is currently open
+
+For everyday local development, `nginx` currently publishes **both** `443` and `80` (with `80` redirecting to `443`), and `run-vm.sh` forwards `HTTP_HOST_PORT` accordingly. **The evaluation explicitly requires port 443 only** (`http://` must refuse the connection, not redirect) — see the revert steps under "Simple setup" above, and do them before your defense. This is the one item in this document that is a deliberate, temporary step backward from a previously-compliant state, not an oversight.
 
 Remaining items are either procedural (only observable live during the defense) or, for the FTP passive-mode address, worth testing end-to-end before your defense since it wasn't practical to verify by static inspection alone.
