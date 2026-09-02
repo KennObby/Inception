@@ -117,8 +117,6 @@ services:
         condition: service_healthy
     networks:
       - inception
-    ports:
-      - "8080:8080"
     environment:
       - DOMAIN=${DOMAIN}
       - KC_DB=mariadb
@@ -135,6 +133,7 @@ services:
       - KC_TEST_USER_EMAIL=${KC_TEST_USER_EMAIL}
       - KEYCLOAK_ADMIN=${KC_ADMIN}
       - KEYCLOAK_ADMIN_PASSWORD=${KC_ADMIN_PWD}
+
 networks:
   inception:
     driver: bridge

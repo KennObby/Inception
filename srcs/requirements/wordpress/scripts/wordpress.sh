@@ -10,8 +10,8 @@ DB_PORT="${WP_DB_HOST#*:}"
 
 WP_URL="${WP_PUBLIC_URL:-https://${DOMAIN}}"
 
-: "${KC_REALM:=inception}"
-: "${KC_CLIENT_ID:=wordpress}"
+: "${KC_REALM:?KC_REALM is not set}"
+: "${KC_CLIENT_ID:?KC_CLIENT_ID is not set}"
 : "${KC_CLIENT_SECRET:?KC_CLIENT_SECRET not set}"
 
 echo "Waiting for MariaDB at $DB_HOST:$DB_PORT and DB ${WP_DB}..."
