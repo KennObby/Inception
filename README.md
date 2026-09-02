@@ -34,7 +34,6 @@ Further reference:
 ## Resources
 
 - [Inception subject (PDF)](https://cdn.intra.42.fr/pdf/pdf/192349/en.subject.pdf)
-- [42 EvalHub — Inception evaluation sheet](https://www.42evalhub.com/common/inception)
 - [Docker Compose documentation](https://docs.docker.com/compose/)
 - [NGINX documentation](https://nginx.org/en/docs/)
 - [WordPress `wp-cli` handbook](https://developer.wordpress.org/cli/commands/)
